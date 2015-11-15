@@ -1,4 +1,5 @@
 #include "config.h"
+#include "nazabutler.h"
 
 #include "FrSkySportSensorGps.h"
 #include "FrSkySportSensorFlvss.h"
@@ -9,10 +10,7 @@
 #define SERIAL_9BIT_SUPPORT
 #include "FUTABA_SBUS.h"
 
-
-
-
-//#include <AltSoftSerial.h>
+#include <AltSoftSerial.h>
 #include <PulsePosition.h>
 
 FrSkySportSensorGps gps;                               // Create GPS sensor with default ID
@@ -20,12 +18,22 @@ FrSkySportSensorGps gps;                               // Create GPS sensor with
 FrSkySportTelemetry telemetry;                         // Create telemetry object
 FrSkySportSensorFlvss flvss1;                          // Create FLVSS sensor with default ID
 
-PulsePositionInput ppmSum;
+//PulsePositionInput ppmSum;
 
 FUTABA_SBUS sBus;
 
 int flightmode;
+int receiver_rssi;
+uint16_t rc_inputs[16];
 
+double getHeading()
+{
+  // more than 2m/s
+  if (NazaDecoder.getFixType() >= NazaDecoderLib::FIX_3D && NazaDecoder.getSpeed() >= 2)
+    return NazaDecoder.getCog();
+  else
+    return NazaDecoder.getHeadingNc();
+}
 
 void setup()
 {
@@ -34,8 +42,14 @@ void setup()
 #ifdef DEBUG
   DebugSerial.begin(115200);
 #endif
- ppmSum.begin(23); 
+// ppmSum.begin(23); 
  sBus.begin();
+}
+
+uint16_t sbusToPPM(uint16_t sbus)
+{
+  // 400 -> 1000, 1600 -> 2000
+  return (sbus - 400) *5 / 6+1000;
 }
 
 void checkSbusState()
@@ -62,6 +76,11 @@ void checkSbusState()
     sBus.toChannels=0;
     if (flightmode != oldMode)
       DebugSerial.printf("Flightmode changed to %d", flightmode);
+
+    for (int i=0;i<16;i++) {
+      rc_inputs[i]=sBus.Channel(i+1);
+    }
+  
 }
 
 void loop()
@@ -81,7 +100,7 @@ void loop()
 
         // We just assume that heading is recent enough
         gps.setData(NazaDecoder.getLat(), NazaDecoder.getLon(), NazaDecoder.getGpsAlt(),
-                    NazaDecoder.getSpeed(), NazaDecoder.getHeadingNc(),
+                    NazaDecoder.getSpeed(), getHeading(),
                     NazaDecoder.getYear(), NazaDecoder.getMonth(),NazaDecoder.getDay(), NazaDecoder.getHour(), NazaDecoder.getMinute(), NazaDecoder.getSecond());
         break;
       case NAZA_MESSAGE_COMPASS:
@@ -95,7 +114,7 @@ void loop()
     }
   }
   
-
+/*
   auto chans =ppmSum.available();
   if (chans >=1) {
     for (int i=1;i<=chans;i++) {
@@ -103,23 +122,9 @@ void loop()
     }
     DebugSerial.printf(" %d\n",chans);
   }
+*/
 
-  auto sa = sbusSerial.available();
-  if (sa >=48) {
-    bool sf=false;
-    bool s7=true;
-    for (int i=0;i<sa;i++) {
-          auto c = sbusSerial.read();
-          if (c!=0xf && sf==false) 
-            continue;
-            sf=true;
-          if (c!=0x07 && s7==false) 
-            continue;
-            s7=true;
-      DebugSerial.printf("%02x ",c);
-     }
-    DebugSerial.printf("\n", sa);
-}
+
   sBus.FeedLine();
   if (sBus.toChannels) {
     checkSbusState();

@@ -14,40 +14,61 @@ https://code.google.com/p/minimosd-extra/wiki/APM
 
 
 #include "config.h"
+#include "nazabutler.h"
 #include "NazaDecoderLib.h"
 #define DEBUG_GPS
 
 
-#define MAVLINK_USE_CONVENIENCE_FUNCTIONS
+AltSoftSerial altSerial;
 
-#include "GCS_MAVLink.h"
-#include "../GCS_MAVLink/include/mavlink/v1.0/mavlink_types.h"
+
+
+#define MAVLINK_USE_CONVENIENCE_FUNCTIONS
+#include <mavlink_types.h>
 mavlink_system_t mavlink_system;
 
+// Needs to be here, since the library is weird and expects this function to be defined before mavlink.h is included
+void comm_send_ch(mavlink_channel_t chan, uint8_t ch);
 
-#if defined(HOME_SET_PRECISION)
-float home_set_precision = HOME_SET_PRECISION;
-#else
-float home_set_precision = 0.2;
+#include <mavlink.h>
+
+
+#ifndef HOME_SET_PRECISION
+#define HOME_SET_PRECISION 0.2;
 #endif
+
+
+static int alt_Home_m=-1000; // not set
+
+
+void comm_send_ch(mavlink_channel_t chan, uint8_t ch)
+{
+    if (chan == MAVLINK_COMM_0)
+    {
+        MavlinkSerial.write(ch);
+    }
+}
+
 void sendMavlinkMessages() {
+  static unsigned long fix_time=0;
+  
   unsigned long currtime=millis();
+
   
   static unsigned long heartbeat_1hz=0;
   static unsigned long heartbeat_2hz=0;
   static unsigned long heartbeat_3hz=0;
   static unsigned long heartbeat_5hz=0;
   static unsigned long dimming = 0;
-  static float alt_MSL_m_last=0;
-
+  static float gps_altitude_last=0;
 
   mavlink_system.sysid = 100; // System ID, 1-255
   mavlink_system.compid = 50; // Component/Subsystem ID, 1-255
   
   //Home can be set when GPS is 3D fix, and altitude is not changing (within 20cm) for more than 10s
-  if(  (gpsFix < 3) || (abs(alt_MSL_m_last - alt_MSL_m) > home_set_precision ) ) {
+  if(  (NazaDecoder.getFixType() < 3) || (abs(gps_altitude_last - NazaDecoder.getGpsAlt()) > HOME_SET_PRECISION ) ) {
     fix_time = currtime + 10000;
-    alt_MSL_m_last = alt_MSL_m;
+    gps_altitude_last = NazaDecoder.getGpsAlt();
   } 
   
   #if defined(HOME_SET_AUTO_TIMEOUT)
@@ -57,9 +78,8 @@ void sendMavlinkMessages() {
   #endif
   
   //Set home altitude if not already set, and 3D fix and copter moving for more than 500ms
-  if( (home_set == 0) && (currtime > fix_time) ) {
-    alt_Home_m = NazaDecoder.getGPSalt();
-    home_set = 1;
+  if( (alt_Home_m == -1000) && (currtime > fix_time) ) {
+    alt_Home_m = NazaDecoder.getGpsAlt();
   } 
   
   #if defined(LIPO_CAPACITY_MAH_MULTI)
@@ -107,9 +127,9 @@ void sendMavlinkMessages() {
   } 
   
   if( currtime - dimming < 15 ) { //LED is on for 30ms when a message is sent
-    LEDPIN_ON
+    digitalWrite(13, HIGH);
   } else {
-    LEDPIN_OFF
+    digitalWrite(13, LOW);
   }
 }
 
@@ -133,14 +153,14 @@ void sendGlobalPosition() {
     mavlink_msg_global_position_int_send(
         MAVLINK_COMM_0,
         millis(), 
-        (long)(lat*10000000), 
-        (long)(lon*10000000), 
-        (long)(alt_MSL_m*1000.0), 
-        (long)((alt_MSL_m - alt_Home_m)*1000.0), 
+        (long)(NazaDecoder.getLat()*10000000), 
+        (long)(NazaDecoder.getLon()*10000000), 
+        (long)(NazaDecoder.getGpsAlt()*1000.0), 
+        (long)((NazaDecoder.getGpsAlt()- alt_Home_m)*1000.0), 
         0, //Unknown, so not set
         0, //Unknown, so not set 
         0, //Unknown, so not set
-        heading_d * 100.0);
+        getHeading() * 100.0);
 }
 
 //Send MAVLink Heartbeat, 1hz 
@@ -167,16 +187,14 @@ void sendHeartBeat() {
   //flightmode 10 : OF_Loiter
   
   uint8_t mav_base_mode = MAV_MODE_FLAG_STABILIZE_ENABLED | MAV_MODE_FLAG_GUIDED_ENABLED | MAV_MODE_FLAG_MANUAL_INPUT_ENABLED;
+ 
   //Custom flag used to indicate home altitude is set
-  if( home_set == 1 ) {
+  if( alt_Home_m != -1000 ) {
     mav_base_mode |= MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;
   }
   //Consider copter armed when there's some throttle
-  if( (throttlepercent > 10) ) {
-    mav_base_mode = mav_base_mode | MAV_MODE_FLAG_SAFETY_ARMED;
-    isArmed = 1;
-  } else {
-    isArmed = 0;
+  if( (rc_inputs[THROTTLECHANNEL] > THROTTLEARMED) ) {
+    mav_base_mode = mav_base_mode | MAV_MODE_FLAG_SAFETY_ARMED;  
   }
   
   mavlink_msg_heartbeat_send(
@@ -210,15 +228,15 @@ void sendGpsData() {
   mavlink_msg_gps_raw_int_send(
     MAVLINK_COMM_0,
     millis(), 
-    gpsFix, 
-    (long)(lat*10000000), 
-    (long)(lon*10000000), 
-    (long)(alt_MSL_m*1000.0), 
-    eph_cm,
-    epv_cm, 
-    ground_speed_ms * 100.0, 
-    cog_cd, 
-    numsats);
+    NazaDecoder.getFixType(), 
+    (uint32_t)(NazaDecoder.getLat()*10000000), 
+    (uint32_t)(NazaDecoder.getLon()*10000000), 
+    (uint32_t)(NazaDecoder.getGpsAlt()*1000), 
+     NazaDecoder.getHdop() * 100,
+     NazaDecoder.getVdop() * 100, 
+    NazaDecoder.getSpeed() * 100, 
+    NazaDecoder.getCog() * 100, 
+    NazaDecoder.getNumSat());
 }
 
 
@@ -234,6 +252,8 @@ void sendGpsData() {
 // pitchspeed Pitch angular speed (rad/s)
 // yawspeed Yaw angular speed (rad/s)
 
+
+float pitch_rad=0;
 void sendAttitude() {
 	pitch_rad = (pitch_pwm - PITCH_LEVEL) * PI/500.0 * PITCH_GAIN / 10.0; ///12.00;      //500 is the difference between vertical and level
 	#if defined(PITCH_INVERT)
@@ -284,7 +304,7 @@ void sendVfrHud() {
           ground_speed_ms,
           ground_speed_ms, 
           heading_d, 
-          throttlepercent, 
+          throttlepercent, comm
           alt_m, 
           -climb); 
 }
@@ -337,6 +357,7 @@ void sendSystemStatus() {
 // chan8_raw RC channel 8 value, in microseconds
 // rssi Receive signal strength indicator, 0: 0%, 255: 100%
 
+
 void sendRawChannels() {
 	mavlink_msg_rc_channels_raw_send(
         MAVLINK_COMM_0,
@@ -344,19 +365,12 @@ void sendRawChannels() {
         0,        // port 0
         roll_pwm,
         pitch_pwm,
-        #if defined(RC_PPM_MODE)
-            rcDataPPM[YAW_PPM],       // Yaw
-            throttle_pwm,  // Throttle
-            rcDataPPM[X1_PPM],        // X1
-            rcDataPPM[X2_PPM],        // X2
-        #else 
-            1500,
-            throttle_pwm,
-            1500,
-            1500,
-       #endif
-        rcDataSTD[FMODE_STD],     // Flight mode
-        panel_pwm,       // Aux
+        sbusToPPM (rc_inputs[0]),
+        sbusToPPM (rc_inputs[1]),
+        sbusToPPM (rc_inputs[2]),
+        sbusToPPM (rc_inputs[3]),
+        sbusToPPM (rc_inputs[4]),
+        flightmode,     // Flight mode
         receiver_rssi);
 }
 
