@@ -199,3 +199,4 @@ struct	FlexTimerChannel_Struct {
 	volatile	uint32_t    CnSC;		/* Status and Control Register	*/
 	volatile	uint32_t	CnV;		/* Channel Value Register		*/
 };
+

@@ -193,7 +193,7 @@ void sendHeartBeat() {
     mav_base_mode |= MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;
   }
   //Consider copter armed when there's some throttle
-  if( (rc_inputs[THROTTLECHANNEL] > THROTTLEARMED) ) {
+  if( (rc_inputs[THROTTLE_CHANNEL] > THROTTLEARMED) ) {
     mav_base_mode = mav_base_mode | MAV_MODE_FLAG_SAFETY_ARMED;  
   }
   
@@ -254,6 +254,7 @@ void sendGpsData() {
 
 
 float pitch_rad=0;
+float roll_rad;
 void sendAttitude() {
 	pitch_rad = (pitch_pwm - PITCH_LEVEL) * PI/500.0 * PITCH_GAIN / 10.0; ///12.00;      //500 is the difference between vertical and level
 	#if defined(PITCH_INVERT)
@@ -298,15 +299,17 @@ void sendAttitude() {
 // climb Current climb rate in meters/second
 
 void sendVfrHud() {
+
+  // We just use gsp ground speed as airspeed since we don't have real airspeed
 	//mavlink_msg_vfr_hud_send(mavlink_channel_t chan, float airspeed, float groundspeed, int16_t heading, uint16_t throttle, float alt, float climb)
 	mavlink_msg_vfr_hud_send(
           MAVLINK_COMM_0,
-          ground_speed_ms,
-          ground_speed_ms, 
-          heading_d, 
-          throttlepercent, comm
-          alt_m, 
-          -climb); 
+          NazaDecoder.getSpeed(),
+          NazaDecoder.getSpeed(), 
+          getHeading(), 
+          sbusToPercent(rc_inputs[THROTTLE_CHANNEL]),
+          NazaDecoder.getGpsAlt(), 
+          -NazaDecoder.getGpsVsi()); 
 }
 
 
@@ -328,16 +331,23 @@ void sendVfrHud() {
 // errors_count3 Autopilot-specific errors
 // errors_count4 Autopilot-specific errors
 
+static int estimatepower()
+{
+  return 4;
+}
+
+int ampbatt_A;
 void sendSystemStatus() {
+  int battery_remaining_A;
 	//current is in ma.  Function needs to send in ma/10.
-	#if ESTIMATE_BATTERY_REMAINING == ENABLED
+#if ESTIMATE_BATTERY_REMAINING == ENABLED
             battery_remaining_A = estimatepower();
             ampbatt_A = 0;
-	#else
+#else
             battery_remaining_A = capacity/battery_capacity*100.0;
             ampbatt_A = IFinal;
-        #endif
-        mavlink_msg_sys_status_send(MAVLINK_COMM_0,0,0,0,0,long(VFinal*1000.0),ampbatt_A*100.0,battery_remaining_A,0,0,0,0,0,0);
+ #endif
+        mavlink_msg_sys_status_send(MAVLINK_COMM_0,0,0,0,0,long(battery_voltage*1000.0),ampbatt_A*100.0,battery_remaining_A,0,0,0,0,0,0);
 }
 
 

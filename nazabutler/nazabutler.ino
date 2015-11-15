@@ -1,9 +1,9 @@
 #include "config.h"
 #include "nazabutler.h"
 
+#include "FrSkySportTelemetry.h"
 #include "FrSkySportSensorGps.h"
 #include "FrSkySportSensorFlvss.h"
-#include "FrSkySportTelemetry.h"
 
 #include "NazaDecoderLib.h"
 
@@ -11,7 +11,7 @@
 #include "FUTABA_SBUS.h"
 
 #include <AltSoftSerial.h>
-#include <PulsePosition.h>
+//#include <PulsePosition.h>
 
 FrSkySportSensorGps gps;                               // Create GPS sensor with default ID
 
@@ -44,13 +44,10 @@ void setup()
 #endif
 // ppmSum.begin(23); 
  sBus.begin();
+
+ MavlinkSerial.begin(57600);
 }
 
-uint16_t sbusToPPM(uint16_t sbus)
-{
-  // 400 -> 1000, 1600 -> 2000
-  return (sbus - 400) *5 / 6+1000;
-}
 
 void checkSbusState()
 {
@@ -63,7 +60,7 @@ void checkSbusState()
 #endif
 
     auto oldMode = flightmode;
-    auto modeChannel = sBus.Channel(MODECHANNEL);
+    auto modeChannel = sBus.Channel(MODE_CHANNEL);
     if (modeChannel >= GPS_LOW &&  modeChannel <= GPS_HIGH) {
       flightmode = FLIGHTMODE_GPS_MODE;
     } else if (modeChannel >= ATTI_LOW &&  modeChannel <= ATTI_HIGH) {
@@ -133,4 +130,5 @@ void loop()
   telemetry.send();
  
 }
+
 

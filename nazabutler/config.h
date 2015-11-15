@@ -17,8 +17,8 @@
 // USB Port, emulated
 #define DebugSerial Serial
 
-#define THROTTLECHANNEL 3
-#define MODECHANNEL 7
+#define THROTTLE_CHANNEL 3
+#define MODE_CHANNEL 7
 
 // sbus value to consider being armed
 #define THROTTLEARMED 600
@@ -51,6 +51,7 @@
 
 #define MANUAL_LOW 481
 #define MANUAL_HIGH 512
+
 
 
 
