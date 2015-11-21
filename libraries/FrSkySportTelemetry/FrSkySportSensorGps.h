@@ -71,6 +71,7 @@ class FrSkySportSensorGps : public FrSkySportSensor
     uint8_t hour;
     uint8_t minute;
     uint8_t second;
+    bool dataSet=false;
 };
 
 #endif // _FRSKY_SPORT_SENSOR_GPS_H_

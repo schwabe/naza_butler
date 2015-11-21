@@ -1,4 +1,3 @@
-
 #ifndef FUTABA_SBUS_h
 #define FUTABA_SBUS_h
 
@@ -10,11 +9,11 @@
 #define SBUS_SIGNAL_FAILSAFE    0x03
 #define BAUDRATE 100000
 //------------------------------------
- // f�r Pro Micro,Mega und Leonardo andere Serial1 Serial2 Serial3 
-//#define sbusSerial Serial // f�r Nano Micro Mini da nur 1 Serielle vorhanden 
+ // fuer Pro Micro,Mega und Leonardo andere Serial1 Serial2 Serial3 
+//#define sbusSerial Serial // fuer Nano Micro Mini da nur 1 Serielle vorhanden 
 //ATmega 32U4 hat interne USB an D+ D- als Serial, damit USART TX Rx frei als Serial1
 //--------------------------------------
-#define ALL_CHANNELS  // falls alle 16 Kan�le
+#define ALL_CHANNELS  // falls alle 16 Kanuele
 
 
 class FUTABA_SBUS

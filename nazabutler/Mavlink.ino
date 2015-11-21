@@ -22,7 +22,6 @@ https://code.google.com/p/minimosd-extra/wiki/APM
 AltSoftSerial altSerial;
 
 
-
 #define MAVLINK_USE_CONVENIENCE_FUNCTIONS
 #include <mavlink_types.h>
 mavlink_system_t mavlink_system;
@@ -38,9 +37,6 @@ void comm_send_ch(mavlink_channel_t chan, uint8_t ch);
 #endif
 
 
-static int alt_Home_m=-1000; // not set
-
-
 void comm_send_ch(mavlink_channel_t chan, uint8_t ch)
 {
     if (chan == MAVLINK_COMM_0)
@@ -50,8 +46,6 @@ void comm_send_ch(mavlink_channel_t chan, uint8_t ch)
 }
 
 void sendMavlinkMessages() {
-  static unsigned long fix_time=0;
-  
   unsigned long currtime=millis();
 
   
@@ -60,27 +54,9 @@ void sendMavlinkMessages() {
   static unsigned long heartbeat_3hz=0;
   static unsigned long heartbeat_5hz=0;
   static unsigned long dimming = 0;
-  static float gps_altitude_last=0;
 
   mavlink_system.sysid = 100; // System ID, 1-255
   mavlink_system.compid = 50; // Component/Subsystem ID, 1-255
-  
-  //Home can be set when GPS is 3D fix, and altitude is not changing (within 20cm) for more than 10s
-  if(  (NazaDecoder.getFixType() < 3) || (abs(gps_altitude_last - NazaDecoder.getGpsAlt()) > HOME_SET_PRECISION ) ) {
-    fix_time = currtime + 10000;
-    gps_altitude_last = NazaDecoder.getGpsAlt();
-  } 
-  
-  #if defined(HOME_SET_AUTO_TIMEOUT)
-  if( (currtime/1000) > HOME_SET_AUTO_TIMEOUT ) {
-    fix_time = 0;
-  }
-  #endif
-  
-  //Set home altitude if not already set, and 3D fix and copter moving for more than 500ms
-  if( (alt_Home_m == -1000) && (currtime > fix_time) ) {
-    alt_Home_m = NazaDecoder.getGpsAlt();
-  } 
   
   #if defined(LIPO_CAPACITY_MAH_MULTI)
     static unsigned long lasttime=0;

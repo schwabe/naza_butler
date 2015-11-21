@@ -26,6 +26,33 @@ int flightmode;
 int receiver_rssi;
 uint16_t rc_inputs[16];
 
+unsigned long fix_time=0;
+static float gps_altitude_last=0;
+static int alt_Home_m=-1000; // not set
+
+extern AltSoftSerial altSerial;
+
+void checkPosition()
+{
+   unsigned long currtime=millis();
+  //Home can be set when GPS is 3D fix, and altitude is not changing (within 20cm) for more than 10s
+  if(  (NazaDecoder.getFixType() < 3) || (abs(gps_altitude_last - NazaDecoder.getGpsAlt()) > HOME_SET_PRECISION ) ) {
+    fix_time = currtime + 10000;
+    gps_altitude_last = NazaDecoder.getGpsAlt();
+  } 
+  
+  #if defined(HOME_SET_AUTO_TIMEOUT)
+  if( (currtime/1000) > HOME_SET_AUTO_TIMEOUT ) {
+    fix_time = 0;
+  }
+  #endif
+
+  //Set home altitude if not already set, and 3D fix and copter moving for more than 500ms
+  if( (alt_Home_m == -1000) && (currtime > fix_time) ) {
+    alt_Home_m = NazaDecoder.getGpsAlt();
+  } 
+}
+
 double getHeading()
 {
   // more than 2m/s
@@ -95,10 +122,15 @@ void loop()
         DebugSerial.print(", Fix: "); Serial.print(NazaDecoder.getFixType());
         DebugSerial.print(", Sat: "); Serial.println(NazaDecoder.getNumSat());
 
-        // We just assume that heading is recent enough
-        gps.setData(NazaDecoder.getLat(), NazaDecoder.getLon(), NazaDecoder.getGpsAlt(),
-                    NazaDecoder.getSpeed(), getHeading(),
-                    NazaDecoder.getYear(), NazaDecoder.getMonth(),NazaDecoder.getDay(), NazaDecoder.getHour(), NazaDecoder.getMinute(), NazaDecoder.getSecond());
+        checkPosition();
+
+        if (alt_Home_m != -1000) {
+            // We just assume that heading is recent enough
+            gps.setData(NazaDecoder.getLat(), NazaDecoder.getLon(), NazaDecoder.getGpsAlt(),
+                        NazaDecoder.getSpeed(), getHeading(),
+                        NazaDecoder.getYear(), NazaDecoder.getMonth(),NazaDecoder.getDay(),
+                        NazaDecoder.getHour(), NazaDecoder.getMinute(), NazaDecoder.getSecond());
+        }
         break;
       case NAZA_MESSAGE_COMPASS:
         //DebugSerial.print("Heading: "); Serial.println(NazaDecoder.getHeadingNc(), 2);
@@ -128,6 +160,7 @@ void loop()
   }
   
   telemetry.send();
+  sendMavlinkMessages();
  
 }
 

@@ -17,6 +17,7 @@ void FrSkySportSensorGps::setData(float lat, float lon, float alt, float speed, 
   altData = alt * 100;
   dateData = setDateTime(year, month, day, true);
   timeData = setDateTime(hour, minute, second, false);
+  dataSet = true;
 }
 
 uint32_t FrSkySportSensorGps::setLatLon(float latLon, bool isLat)
@@ -48,7 +49,7 @@ void FrSkySportSensorGps::send(FrSkySportSingleWireSerial& serial, uint8_t id, u
     switch(sensorDataIdx)
     {
       case 0:
-        if(now > latTime)
+        if(now > latTime && dataSet)
         {
           latTime = now + GPS_LAT_LON_DATA_PERIOD;
           serial.sendData(GPS_LAT_LON_DATA_ID, latData);
@@ -59,7 +60,7 @@ void FrSkySportSensorGps::send(FrSkySportSingleWireSerial& serial, uint8_t id, u
         }
         break;
       case 1:
-        if(now > lonTime)
+        if(now > lonTime && dataSet)
         {
           lonTime = now + GPS_LAT_LON_DATA_PERIOD;
           serial.sendData(GPS_LAT_LON_DATA_ID, lonData);
@@ -70,7 +71,7 @@ void FrSkySportSensorGps::send(FrSkySportSingleWireSerial& serial, uint8_t id, u
         }
         break;
       case 2:
-        if(now > altTime)
+        if(now > altTime && dataSet)
         {
           altTime = now + GPS_ALT_DATA_PERIOD;
           serial.sendData(GPS_ALT_DATA_ID, altData);
@@ -81,7 +82,7 @@ void FrSkySportSensorGps::send(FrSkySportSingleWireSerial& serial, uint8_t id, u
         }
         break;
       case 3:
-        if(now > speedTime)
+        if(now > speedTime && dataSet)
         {
           speedTime = now + GPS_SPEED_DATA_PERIOD;
           serial.sendData(GPS_SPEED_DATA_ID, speedData);
@@ -92,7 +93,7 @@ void FrSkySportSensorGps::send(FrSkySportSingleWireSerial& serial, uint8_t id, u
         }
         break;
       case 4:
-        if(now > cogTime)
+        if(now > cogTime && dataSet)
         {
           cogTime = now + GPS_COG_DATA_PERIOD;
           serial.sendData(GPS_COG_DATA_ID, cogData);
@@ -103,7 +104,7 @@ void FrSkySportSensorGps::send(FrSkySportSingleWireSerial& serial, uint8_t id, u
         }
         break;
       case 5:
-        if(now > dateTime)
+        if(now > dateTime && dataSet)
         {
           dateTime = now + GPS_DATE_TIME_DATA_PERIOD;
           serial.sendData(GPS_DATE_TIME_DATA_ID, dateData);
@@ -114,7 +115,7 @@ void FrSkySportSensorGps::send(FrSkySportSingleWireSerial& serial, uint8_t id, u
         }
         break;
       case 6:
-        if(now > timeTime)
+        if(now > timeTime && dataSet)
         {
           timeTime = now + GPS_DATE_TIME_DATA_PERIOD;
           serial.sendData(GPS_DATE_TIME_DATA_ID, timeData);
