@@ -1,36 +1,42 @@
 #include "config.h"
-#include "nazabutler.h"
+
 
 #include "FrSkySportTelemetry.h"
 #include "FrSkySportSensorGps.h"
 #include "FrSkySportSensorFlvss.h"
+#include "FrSkySportSensorSp2Uart.h"
 
 #include "NazaDecoderLib.h"
+#include <ADC.h>
 
 #define SERIAL_9BIT_SUPPORT
 #include "FUTABA_SBUS.h"
 
 #include <AltSoftSerial.h>
-//#include <PulsePosition.h>
+
+#include "nazabutler.h"
+#include "analog.h"
+#include "ppm.h"
+#include "PulsePosition_ftm2.h"
 
 FrSkySportSensorGps gps;                               // Create GPS sensor with default ID
 
 FrSkySportTelemetry telemetry;                         // Create telemetry object
-FrSkySportSensorFlvss flvss1;                          // Create FLVSS sensor with default ID
+//FrSkySportSensorFlvss flvss1;                          // Create FLVSS sensor with default ID
+FrSkySportSensorSp2uart sp2uart;
 
-//PulsePositionInput ppmSum;
+PulsePositionInput rollPPM;
+PulsePositionInput pitchPPM;
+
 
 FUTABA_SBUS sBus;
 
 int flightmode;
-int receiver_rssi;
 uint16_t rc_inputs[16];
 
 unsigned long fix_time=0;
 static float gps_altitude_last=0;
 static int alt_Home_m=-1000; // not set
-
-extern AltSoftSerial altSerial;
 
 void checkPosition()
 {
@@ -64,27 +70,33 @@ double getHeading()
 
 void setup()
 {
-  telemetry.begin(SportSerial, &gps);
+  
   NazaSerial.begin(115200);
 #ifdef DEBUG
   DebugSerial.begin(115200);
 #endif
-// ppmSum.begin(23); 
- sBus.begin();
+
+  rollPPM.begin(25);
+  pitchPPM.begin(32);
+
+  sBus.begin();
+telemetry.begin(SportSerial, &gps, &sp2uart);
 
  MavlinkSerial.begin(57600);
+ setupAnalogSensors();
+ // setupPPM();
+
+ pinMode(LED_BUILTIN, OUTPUT);
 }
 
 
 void checkSbusState()
 {
     sBus.UpdateChannels();
-#if 0
-    for (int i=1;i<=16;i++) {
-      DebugSerial.printf("S%d: %d ", i , sBus.Channel(i));
-    }
-    DebugSerial.printf(" \n");
-#endif
+//    for (int i=1;i<=16;i++) {
+//      DebugSerial.printf("S%d: %d ", i , sBus.Channel(i));
+//    }
+//    DebugSerial.printf(" \n");
 
     auto oldMode = flightmode;
     auto modeChannel = sBus.Channel(MODE_CHANNEL);
@@ -99,7 +111,7 @@ void checkSbusState()
     }
     sBus.toChannels=0;
     if (flightmode != oldMode)
-      DebugSerial.printf("Flightmode changed to %d", flightmode);
+      DebugSerial.printf("Flightmode (%d) changed to %d\n", modeChannel, flightmode);
 
     for (int i=0;i<16;i++) {
       rc_inputs[i]=sBus.Channel(i+1);
@@ -109,6 +121,19 @@ void checkSbusState()
 
 void loop()
 {
+  auto currtime=millis();
+
+  static unsigned long analogSensors = 0;
+  if (currtime > analogSensors) {
+    analogSensors= currtime+200;
+    readAnalogSensors();
+    // Blink with some weird pattern :)
+    digitalWrite(LED_BUILTIN, (currtime >> 12) & 0x1);
+    sp2uart.setData(battery_voltage/1000.0f, getReceiverRSSI());
+
+//    DebugSerial.printf("roll_ppm: %d, pitch_ppm: %d\n", roll_ppm, pitch_ppm);
+  }
+    
   if(Serial3.available())
   {
     char c = Serial3.read();
@@ -116,11 +141,13 @@ void loop()
     switch (decodedMessage)
     {
       case NAZA_MESSAGE_GPS:
+#ifdef DEBUG_GPS
         DebugSerial.print("Lat: "); Serial.print(NazaDecoder.getLat(), 7);
         DebugSerial.print(", Lon: "); Serial.print(NazaDecoder.getLon(), 7);
         DebugSerial.print(", Alt: "); Serial.print(NazaDecoder.getGpsAlt(), 7);
         DebugSerial.print(", Fix: "); Serial.print(NazaDecoder.getFixType());
         DebugSerial.print(", Sat: "); Serial.println(NazaDecoder.getNumSat());
+#endif
 
         checkPosition();
 
@@ -143,17 +170,27 @@ void loop()
     }
   }
   
-/*
-  auto chans =ppmSum.available();
+  
+  auto chans =pitchPPM.available();
   if (chans >=1) {
-    for (int i=1;i<=chans;i++) {
-      DebugSerial.printf("C%d: %.2f ", i, ppmSum.read(i));
+    pitch_ppm = pitchPPM.read(1);;
+    for (int i=2;i<=chans;i++) {
+      pitchPPM.read(i);
+      //DebugSerial.printf("P%d: %.2f ", i,);
     }
-    DebugSerial.printf(" %d\n",chans);
   }
-*/
 
+  chans =rollPPM.available();
+  if (chans >=1) {
+    roll_ppm = rollPPM.read(1);
+    for (int i=2;i<=chans;i++) {
+      rollPPM.read(i);
+      //DebugSerial.printf("R%d: %.2f ", i, rollPPM.read(i));
+    }
+    //DebugSerial.printf(" %d\n",chans);
+  }
 
+  
   sBus.FeedLine();
   if (sBus.toChannels) {
     checkSbusState();
@@ -161,7 +198,6 @@ void loop()
   
   telemetry.send();
   sendMavlinkMessages();
- 
 }
 
 

@@ -1,0 +1,81 @@
+Panel 1
+Pitch	8	13	True
+Roll	16	13	True
+Battery A	22	12	True
+Visible Sats	23	1	True
+Real heading	12	13	False
+GPS Coord	10	1	False
+Heading Rose	11	14	True
+Heading	2	14	True
+Home Direction	14	1	True
+Home Distance	1	1	True
+WP Distance	22	10	False
+Altitude	1	3	True
+Home Altitude	1	2	True
+Vertical Speed	2	13	True
+Battery Percent	22	14	True
+Current	2	12	True
+Velocity	2	10	True
+Air Speed	0	0	False
+Throttle	2	11	True
+Flight Mode	23	2	True
+Horizon	21	11	True
+Wind Speed	0	0	False
+Warnings	9	3	True
+Time	22	13	True
+RSSI	23	10	True
+Efficiency	0	0	False
+Call Sign	1	0	False
+Temperature	0	15	False
+Trip Distance	22	3	True
+Panel 2
+Pitch	22	10	False
+Roll	11	1	False
+Battery A	1	13	False
+Visible Sats	1	9	False
+Real heading	1	10	False
+GPS Coord	1	14	False
+Heading Rose	17	14	False
+Heading	24	13	False
+Home Direction	14	3	False
+Home Distance	22	1	False
+WP Distance	20	11	False
+Altitude	22	3	False
+Home Altitude	22	2	False
+Vertical Speed	1	7	False
+Battery Percent	1	5	False
+Current	1	12	False
+Velocity	1	2	False
+Air Speed	1	1	False
+Throttle	1	4	False
+Flight Mode	18	13	False
+Horizon	8	6	False
+Wind Speed	24	7	False
+Warnings	9	4	False
+Time	22	4	False
+RSSI	12	12	False
+Efficiency	1	3	False
+Call Sign	1	0	False
+Temperature	255	255	False
+Trip Distance	22	2	True
+Configuration
+Model Type	1
+Units	0
+Overspeed	100
+Stall	100
+Battery	100
+RSSI High	100
+RSSI Low	0
+RSSI Enable Raw	0
+Toggle Channel	3
+Auto Screen Switch	255
+Chanel Rotation Switching	0
+Video Mode	0
+Battery Warning Level	10
+RSSI Warning Level	15
+OSD Brightness	2
+Call Sign	do3sch
+Sign Air Speed	19
+Sign Ground  Speed	20
+Sign Home Altitude	18
+Sign MSL Altitude	17

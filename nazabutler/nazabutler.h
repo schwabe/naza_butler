@@ -1,21 +1,20 @@
 #ifndef _NAZABUTLER_H
 #define _NAZABUTLER_H 
 #include <stdint.h>
+#include <AltSoftSerial.h>
 
 //! Return compass heading or GPS heading depending on speed (>= 2m/s)
 double getHeading();
 
 // global variables
-extern int receiver_rssi;
+
 extern int flightmode;
 extern uint16_t rc_inputs[];
 
-extern int roll_pwm;
-extern int pitch_pwm;
 
 extern float pitch_rad;
 
-extern uint16_t battery_voltage;
+extern AltSoftSerial altSerial;
 
 // Defines for APM/NAVLINK
 #define FLIGHTMODE_ACRO_MODE       1

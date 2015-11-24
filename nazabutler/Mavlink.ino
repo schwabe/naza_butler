@@ -16,6 +16,9 @@ https://code.google.com/p/minimosd-extra/wiki/APM
 #include "config.h"
 #include "nazabutler.h"
 #include "NazaDecoderLib.h"
+#include "analog.h"
+#include "ppm.h"
+
 #define DEBUG_GPS
 
 
@@ -229,10 +232,9 @@ void sendGpsData() {
 // yawspeed Yaw angular speed (rad/s)
 
 
-float pitch_rad=0;
-float roll_rad;
 void sendAttitude() {
-	pitch_rad = (pitch_pwm - PITCH_LEVEL) * PI/500.0 * PITCH_GAIN / 10.0; ///12.00;      //500 is the difference between vertical and level
+     
+  	float pitch_rad = (pitch_ppm - PITCH_LEVEL) * PI/500.0 * PITCH_GAIN / 10.0; ///12.00;      //500 is the difference between vertical and level
 	#if defined(PITCH_INVERT)
           pitch_rad = pitch_rad * -1.0;
         #endif
@@ -240,7 +242,7 @@ void sendAttitude() {
 	//Pitch correction factor = configured pitch gain /12.00
 	//Roll correction factor = configured roll gain / 7.60
 
-	roll_rad = (roll_pwm - ROLL_LEVEL) * PI/500.0 * ROLL_GAIN / 10.0; ///7.60;
+    float roll_rad = (roll_ppm - ROLL_LEVEL) * PI/500.0 * ROLL_GAIN / 10.0; ///7.60;
         #if defined(ROLL_INVERT)
           roll_rad = roll_rad * -1.0;
         #endif
@@ -307,11 +309,6 @@ void sendVfrHud() {
 // errors_count3 Autopilot-specific errors
 // errors_count4 Autopilot-specific errors
 
-static int estimatepower()
-{
-  return 4;
-}
-
 int ampbatt_A;
 void sendSystemStatus() {
   int battery_remaining_A;
@@ -323,7 +320,7 @@ void sendSystemStatus() {
             battery_remaining_A = capacity/battery_capacity*100.0;
             ampbatt_A = IFinal;
  #endif
-        mavlink_msg_sys_status_send(MAVLINK_COMM_0,0,0,0,0,long(battery_voltage*1000.0),ampbatt_A*100.0,battery_remaining_A,0,0,0,0,0,0);
+        mavlink_msg_sys_status_send(MAVLINK_COMM_0,0,0,0,0,long(battery_voltage),ampbatt_A*100.0,battery_remaining_A,0,0,0,0,0,0);
 }
 
 
@@ -341,7 +338,7 @@ void sendSystemStatus() {
 // chan6_raw RC channel 6 value, in microseconds
 // chan7_raw RC channel 7 value, in microseconds
 // chan8_raw RC channel 8 value, in microseconds
-// rssi Receive signal strength indicator, 0: 0%, 255: 100%
+// uint_8 rssi Receive signal strength indicator, 0: 0%, 255: 100%
 
 
 void sendRawChannels() {
@@ -349,14 +346,14 @@ void sendRawChannels() {
         MAVLINK_COMM_0,
         millis(),
         0,        // port 0
-        roll_pwm,
-        pitch_pwm,
         sbusToPPM (rc_inputs[0]),
         sbusToPPM (rc_inputs[1]),
         sbusToPPM (rc_inputs[2]),
         sbusToPPM (rc_inputs[3]),
         sbusToPPM (rc_inputs[4]),
+        roll_ppm,
+        pitch_ppm,
         flightmode,     // Flight mode
-        receiver_rssi);
+        (uint8_t) getReceiverRSSI());
 }
 
