@@ -13,6 +13,7 @@ void setupAnalogSensors()
 {
   pinMode(A0, INPUT);
   pinMode(A1, INPUT);
+  pinMode(A2, INPUT);
 
   // Temperature Input
   pinMode(38, INPUT);
@@ -54,10 +55,10 @@ float getReceiverRSSI()
  {
    uint32_t a0 = adc->analogRead(A0);
    receiver_rssi = adc->analogRead(A1);
+   uint32_t amps = adc->analogRead(A2);
 
    auto temp = adc->analogRead(38);
-   if (temp != internal_temp)
-     DebugSerial.printf("Temp %d, rssi %d\n", temp, receiver_rssi);
+   DebugSerial.printf("Temp %d, rssi %d, amp %d\r\n", temp, receiver_rssi, amps);
    
    internal_temp = temp;
    

@@ -160,8 +160,8 @@ void loop()
         }
         break;
       case NAZA_MESSAGE_COMPASS:
-        //DebugSerial.print("Heading: "); Serial.println(NazaDecoder.getHeadingNc(), 2);
-        //    void setData(float lat, float lon, float alt, float speed, float cog, uint8_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint8_t second);
+          // DebugSerial.print("Heading: "); Serial.println(NazaDecoder.getHeadingNc(), 2);
+        // void setData(float lat, float lon, float alt, float speed, float cog, uint8_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint8_t second);
         
         break;
       case NAZA_MESSAGE_NONE:
